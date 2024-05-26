@@ -1,5 +1,8 @@
 # Coffee.kt 파일 업그레이드 과제
 
+[Coffee..kt 업그레이드 과제 (2021563038, 서규진).pptx](https://github.com/tjrbwls/HighProgramming/files/15446219/Coffee.kt.2021563038.pptx)
+
+
 ## [과제1번 설명]
 - 사용자가 여러 음료를 선택할 수 있게 하기 위해 orders 리스트를 의미하는 MutableList<Order>를 선언하였습니다.
 - 사용자가 '0'을 입력하면 현재까지의 주문 내역을 출력하고 총합을 계산하게 하였습니다.
