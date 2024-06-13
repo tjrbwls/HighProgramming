@@ -1,82 +1,118 @@
-package com.example.composebasic
+package com.example.helloandroid
 
-import android.content.res.Configuration
+import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.composebasic.ui.theme.ComposeBasicTheme
-import androidx.compose.foundation.border
-import androidx.compose.ui.res.painterResource
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
+import android.widget.Button
+import android.widget.TextView
+import android.widget.Toast
+import java.math.BigDecimal
+import java.math.RoundingMode
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
+    enum class OpKind {
+        ADD, SUBTRACT, MULTIPLY, DIVIDE
+    }
+
+    companion object {
+        fun OpKind.compute(a: BigDecimal, b: BigDecimal) = when (this) {
+            OpKind.ADD -> a + b
+            OpKind.SUBTRACT -> a - b
+            OpKind.MULTIPLY -> a * b
+            OpKind.DIVIDE ->a.divide(b, 10, RoundingMode.HALF_EVEN)
+        }
+    }
+
+    private val txtResult by lazy<TextView> { findViewById(R.id.txtResult) }
+    private var lastResult: BigDecimal = BigDecimal.ZERO;
+    private var lastOp: OpKind? = null
+    private var waitingNextOperand: Boolean = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            ComposeBasicTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "hoho",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+        setContentView(R.layout.activity_main)
+
+        findViewById<Button>(R.id.btn0).setOnClickListener{ appendText("0") }
+        findViewById<Button>(R.id.btn1).setOnClickListener{ appendText("1") }
+        findViewById<Button>(R.id.btn2).setOnClickListener{ appendText("2") }
+        findViewById<Button>(R.id.btn3).setOnClickListener{ appendText("3") }
+        findViewById<Button>(R.id.btn4).setOnClickListener{ appendText("4") }
+        findViewById<Button>(R.id.btn5).setOnClickListener{ appendText("5") }
+        findViewById<Button>(R.id.btn6).setOnClickListener{ appendText("6") }
+        findViewById<Button>(R.id.btn7).setOnClickListener{ appendText("7") }
+        findViewById<Button>(R.id.btn8).setOnClickListener{ appendText("8") }
+        findViewById<Button>(R.id.btn9).setOnClickListener{ appendText("9") }
+        findViewById<Button>(R.id.btnPoint).setOnClickListener{ appendText(".") }
+        findViewById<Button>(R.id.btnSign).setOnClickListener{
+            val currentText = txtResult.text.toString()
+            txtResult.text = when {
+                currentText.startsWith("-") ->
+                    currentText.substring(1, currentText.length)
+                currentText != "0" -> "-$currentText"
+                else ->return@setOnClickListener
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Row(modifier = Modifier.padding(all = 8.dp)){
-        Image(
-            painter = painterResource(id = R.drawable.cat),
-            contentDescription = null,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Column{
-            Text(
-                text = "Hello $name!",
-                modifier = modifier
-            )
-            Text(
-                text = "안녕, 만나서 반가워",
-                modifier = modifier
-            )
+        findViewById<Button>(R.id.btnBackspace).setOnClickListener{
+            val currentText = txtResult.text.toString()
+            val newText = currentText.substring(0, currentText.length - 1)
+            txtResult.text =
+                if (newText.isEmpty() || newText == "-") "0" else newText
+        }
+        findViewById<Button>(R.id.btnClear).setOnClickListener{ clearText() }
+        findViewById<Button>(R.id.btnPlus).setOnClickListener{ calc(OpKind.ADD) }
+        findViewById<Button>(R.id.btnMinus).setOnClickListener{ calc(OpKind.SUBTRACT) }
+        findViewById<Button>(R.id.btnTimes).setOnClickListener{ calc(OpKind.MULTIPLY) }
+        findViewById<Button>(R.id.btnDivide).setOnClickListener{ calc(OpKind.DIVIDE) }
+        findViewById<Button>(R.id.btnCalc).setOnClickListener{ calc(null) }
+        clearText()
+        savedInstanceState?.let {
+            txtResult.text = it.getString("currentText")
+            lastResult = it.getSerializable(::lastResult.name) as BigDecimal
+            lastOp = it.getSerializable(::lastOp.name) as OpKind?
+            waitingNextOperand = it.getBoolean(::waitingNextOperand.name)
         }
     }
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("currentText", txtResult.text.toString())//번들에 문자열 넣기
+        outState.putSerializable(::lastResult.name, lastResult)//번들에 객체를 넣을때 직렬화함수 사용
+        outState.putSerializable(::lastOp.name, lastOp)
+        outState.putBoolean(::waitingNextOperand.name, waitingNextOperand)
+    }
+    private fun clearText() {
+        txtResult.text = "0"
+    }
+    private fun appendText(text: String) {
+        if (waitingNextOperand) {
+            clearText()
+            waitingNextOperand = false
+        }
+        val currentText = txtResult.text.toString()
+        txtResult.text =
+            if (currentText == "0") text else currentText + text
+    }
+    private fun calc(nextOp: OpKind?) {
+        if (waitingNextOperand) {
+            lastOp = nextOp
+            return
+        }
+        val currentValue = BigDecimal(txtResult.text.toString())
+        val newValue = try {
+            lastOp?.compute(lastResult, currentValue) ?: currentValue
+        } catch (e: ArithmeticException) {
+            lastOp = null
+            waitingNextOperand = true
+            Toast.makeText(
+                applicationContext,
+                "Invalid operation!",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
 
-@Preview(name = "Light Mode")
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true, name = "Dark Mode")
-@Composable
-fun GreetingPreview() {
-    ComposeBasicTheme {
-        Greeting("hoho")
+        if (nextOp != null) lastResult = newValue
+        if (lastOp != null) txtResult.text = newValue.toPlainString()
+
+        lastOp = nextOp
+        waitingNextOperand = nextOp != null
     }
 }
